@@ -1,0 +1,7 @@
+---
+deployment: tasks:
+    - npm install
+    - npm run build
+    - export DEPLOYPATH=/aitechstore.online/hrms/
+    - /bin/cp -R dist/* $DEPLOYPATH
+
