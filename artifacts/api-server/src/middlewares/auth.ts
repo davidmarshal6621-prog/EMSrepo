@@ -2,7 +2,7 @@ import type { Request, Response, NextFunction } from "express";
 import { verifyToken } from "../routes/auth";
 
 export interface AuthRequest extends Request {
-  user?: { id: number; email: string; role: string; name: string };
+  user?: { id: number; email: string; role: string; name: string; employeeId?: number | null };
 }
 
 export function requireAuth(req: AuthRequest, res: Response, next: NextFunction): void {

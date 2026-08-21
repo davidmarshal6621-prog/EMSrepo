@@ -9,3 +9,4 @@ export * from "./payroll";
 export * from "./devices";
 export * from "./punch_logs";
 export * from "./company_settings";
+export * from "./company_registrations";

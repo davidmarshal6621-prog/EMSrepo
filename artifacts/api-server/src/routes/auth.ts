@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
-import { db, usersTable } from "@workspace/db";
+import { db, usersTable, companyRegistrationsTable } from "@workspace/db";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { logger } from "../lib/logger";
@@ -9,11 +9,11 @@ const router: IRouter = Router();
 
 const JWT_SECRET = process.env.SESSION_SECRET || "ems-secret-key";
 
-export function signToken(payload: { id: number; email: string; role: string; name: string }) {
+export function signToken(payload: { id: number; email: string; role: string; name: string; employeeId?: number | null }) {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: "7d" });
 }
 
-export function verifyToken(token: string): { id: number; email: string; role: string; name: string } | null {
+export function verifyToken(token: string): { id: number; email: string; role: string; name: string; employeeId?: number | null } | null {
   try {
     return jwt.verify(token, JWT_SECRET) as { id: number; email: string; role: string; name: string };
   } catch {
@@ -40,7 +40,7 @@ router.post("/auth/login", async (req, res): Promise<void> => {
     return;
   }
 
-  const token = signToken({ id: user.id, email: user.email, role: user.role, name: user.name });
+  const token = signToken({ id: user.id, email: user.email, role: user.role, name: user.name, employeeId: user.employeeId });
 
   res.json({
     user: {
@@ -50,6 +50,44 @@ router.post("/auth/login", async (req, res): Promise<void> => {
       role: user.role,
       employeeId: user.employeeId,
     },
+    token,
+  });
+});
+
+router.post("/auth/signup", async (req, res): Promise<void> => {
+  const { companyName, ownerName, email, password, plan = "trial" } = req.body ?? {};
+  if (!companyName || !ownerName || !email || !password || password.length < 8) {
+    res.status(400).json({ error: "Company, name, email and a password of at least 8 characters are required" });
+    return;
+  }
+  const normalizedEmail = String(email).trim().toLowerCase();
+  const existing = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.email, normalizedEmail));
+  if (existing.length) {
+    res.status(409).json({ error: "An account with this email already exists" });
+    return;
+  }
+  const [registration] = await db.insert(companyRegistrationsTable).values({
+    companyName: String(companyName).trim(),
+    ownerName: String(ownerName).trim(),
+    ownerEmail: normalizedEmail,
+    plan: plan === "pro" ? "pro" : "trial",
+    status: "trialing",
+    trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+    maxEmployees: plan === "pro" ? 100 : 10,
+    features: JSON.stringify({ attendance: true, leave: true, payroll: plan === "pro" }),
+  }).returning();
+  const passwordHash = await bcrypt.hash(password, 10);
+  const [user] = await db.insert(usersTable).values({
+    email: normalizedEmail,
+    passwordHash,
+    name: String(ownerName).trim(),
+    role: "admin",
+    isActive: true,
+  }).returning();
+  const token = signToken({ id: user.id, email: user.email, role: user.role, name: user.name });
+  res.status(201).json({
+    company: { id: registration.id, name: registration.companyName, plan: registration.plan, status: registration.status, trialEndsAt: registration.trialEndsAt },
+    user: { id: user.id, email: user.email, name: user.name, role: user.role, employeeId: user.employeeId },
     token,
   });
 });

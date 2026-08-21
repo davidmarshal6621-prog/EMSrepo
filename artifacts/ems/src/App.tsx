@@ -7,6 +7,7 @@ import { AppLayout } from "@/components/layout/app-layout";
 import { useEffect } from "react";
 
 import Login from "@/pages/login";
+import Signup from "@/pages/signup";
 import Dashboard from "@/pages/dashboard";
 import EmployeesList from "@/pages/employees/index";
 import NewEmployee from "@/pages/employees/new";
@@ -55,6 +56,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/login" component={Login} />
+      <Route path="/signup" component={Signup} />
       <Route path="/" component={() => {
         const [, setLocation] = useLocation();
         useEffect(() => setLocation("/dashboard"), []);

@@ -76,22 +76,22 @@ export default function DevicesPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setSyncLog(`❌ Import Failed: ${data.error || "Unknown error"}`);
+        setSyncLog(`Import failed: ${data.error || "Unknown error"}`);
         toast({ title: "Import failed", description: data.error, variant: "destructive" });
       } else {
         setSyncLog(
-          `✅ ${data.message}\n` +
-          `👥 Total users in device: ${data.total}\n` +
-          `🆕 Created: ${data.created} new employees\n` +
-          `🔄 Updated: ${data.updated} existing employees\n` +
-          `⏭️  Skipped: ${data.skipped} already mapped\n\n` +
-          `⚡ Now click "Sync Now" to pull all attendance records.`
+          `${data.message}\n` +
+          `Total users in device: ${data.total}\n` +
+          `Created: ${data.created} new employees\n` +
+          `Updated: ${data.updated} existing employees\n` +
+          `Skipped: ${data.skipped} already mapped\n\n` +
+          `Now click "Sync Now" to pull all attendance records.`
         );
         toast({ title: "Users imported", description: data.message });
         qc.invalidateQueries({ queryKey: ["devices"] });
       }
     } catch (e: any) {
-      setSyncLog(`❌ Network error: ${e.message}`);
+      setSyncLog(`Network error: ${e.message}`);
       toast({ title: "Import error", description: e.message, variant: "destructive" });
     } finally {
       setImportingId(null);
@@ -109,20 +109,20 @@ export default function DevicesPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setSyncLog(`❌ Error: ${data.error || "Unknown error"}\n${data.detail || ""}`);
+        setSyncLog(`Error: ${data.error || "Unknown error"}\n${data.detail || ""}`);
         toast({ title: "Sync failed", description: data.error, variant: "destructive" });
       } else {
         setSyncLog(
-          `✅ ${data.message}\n` +
-          `📊 Total records from device: ${data.total}\n` +
-          `🔄 Synced: ${data.synced}\n` +
-          `⏭️  Skipped (duplicates): ${data.skipped}`
+          `${data.message}\n` +
+          `Total records from device: ${data.total}\n` +
+          `Synced: ${data.synced}\n` +
+          `Skipped (duplicates): ${data.skipped}`
         );
         toast({ title: "Sync complete", description: data.message });
         qc.invalidateQueries({ queryKey: ["devices"] });
       }
     } catch (e: any) {
-      setSyncLog(`❌ Network error: ${e.message}`);
+      setSyncLog(`Network error: ${e.message}`);
       toast({ title: "Sync error", description: e.message, variant: "destructive" });
     } finally {
       setSyncingId(null);
@@ -174,8 +174,8 @@ export default function DevicesPage() {
       </div>
 
       {/* Step-by-step guide */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-900">
-        <strong>📋 Quick Setup Guide:</strong>
+       <div className="bg-primary/5 border border-primary/15 rounded-xl p-4 text-sm text-primary">
+         <strong>Quick setup guide</strong>
         <ol className="list-decimal list-inside mt-2 space-y-1">
           <li><strong>Step 1:</strong> Click <strong>"Import Users from Device"</strong> → imports all 93 employees from your ZKTeco machine automatically.</li>
           <li><strong>Step 2:</strong> Click <strong>"Sync Now"</strong> → downloads all historical attendance records (29,000+) and stores them in the database.</li>
