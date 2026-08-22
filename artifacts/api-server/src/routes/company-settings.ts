@@ -21,6 +21,7 @@ const COMPANY_DEFAULT_SETTINGS: Record<string, string> = {
   lateDeductionType: "half_day",
   lateDeductionValue: "0.5",
   earlyOutDeductionValue: "0",
+  earlyOutGraceMinutes: "0",
   leaveDeductionValue: "1",
   sandwichLeaveEnabled: "false",
   ...DEFAULT_SETTINGS,
