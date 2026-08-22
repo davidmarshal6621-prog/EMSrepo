@@ -80,6 +80,11 @@ export default function CompanySettings() {
     defaultSalary: "0",
     defaultRole: "employee",
     defaultPasswordPrefix: "ZK",
+    lateDeductionType: "half_day",
+    lateDeductionValue: "0.5",
+    earlyOutDeductionValue: "0",
+    leaveDeductionValue: "1",
+    sandwichLeaveEnabled: "false",
   });
 
   useEffect(() => {
@@ -100,6 +105,11 @@ export default function CompanySettings() {
         defaultSalary: settings.defaultSalary || "0",
         defaultRole: settings.defaultRole || "employee",
         defaultPasswordPrefix: settings.defaultPasswordPrefix || "ZK",
+        lateDeductionType: settings.lateDeductionType || "half_day",
+        lateDeductionValue: settings.lateDeductionValue || "0.5",
+        earlyOutDeductionValue: settings.earlyOutDeductionValue || "0",
+        leaveDeductionValue: settings.leaveDeductionValue || "1",
+        sandwichLeaveEnabled: settings.sandwichLeaveEnabled || "false",
       });
     }
   }, [settings]);
@@ -260,6 +270,25 @@ export default function CompanySettings() {
           <Field label="Auto Password Prefix">
             <Input value={form.defaultPasswordPrefix} onChange={e => setForm(f => ({ ...f, defaultPasswordPrefix: e.target.value }))} placeholder="ZK" />
           </Field>
+        </div>
+      </Section>
+
+      {/* Attendance & payroll rules */}
+      <Section icon={UserRoundCog} title="Attendance & payroll rules">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Field label="Late deduction method">
+            <Select value={form.lateDeductionType} onValueChange={v => setForm(f => ({ ...f, lateDeductionType: v }))}>
+              <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
+              <SelectContent><SelectItem value="half_day">Fraction of daily salary</SelectItem><SelectItem value="per_minute">Amount per late minute</SelectItem></SelectContent>
+            </Select>
+          </Field>
+          <Field label="Late deduction value"><Input type="number" min="0" step="0.01" value={form.lateDeductionValue} onChange={e => setForm(f => ({ ...f, lateDeductionValue: e.target.value }))} /></Field>
+          <Field label="Early-out deduction per minute"><Input type="number" min="0" step="0.01" value={form.earlyOutDeductionValue} onChange={e => setForm(f => ({ ...f, earlyOutDeductionValue: e.target.value }))} /></Field>
+          <Field label="Leave deduction multiplier"><Input type="number" min="0" step="0.1" value={form.leaveDeductionValue} onChange={e => setForm(f => ({ ...f, leaveDeductionValue: e.target.value }))} /></Field>
+        </div>
+        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+          <div><div className="text-sm font-medium text-gray-700">Sandwich leave deduction</div><div className="text-xs text-gray-500">Deduct the connected weekend day when absence falls beside a weekend.</div></div>
+          <Switch checked={form.sandwichLeaveEnabled === "true"} onCheckedChange={v => setForm(f => ({ ...f, sandwichLeaveEnabled: v ? "true" : "false" }))} />
         </div>
       </Section>
 
