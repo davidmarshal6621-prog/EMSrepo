@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, and, gte, lte } from "drizzle-orm";
-import { db, attendanceTable, employeesTable, shiftsTable, usersTable } from "@workspace/db";
+import { db, attendanceTable, employeesTable, shiftsTable, shiftSchedulesTable, usersTable } from "@workspace/db";
 import { requireAuth, type AuthRequest } from "../middlewares/auth";
 
 const router: IRouter = Router();
@@ -13,7 +13,7 @@ function fmtAtt(a: typeof attendanceTable.$inferSelect, empName?: string | null,
     checkIn: a.checkIn ? a.checkIn.toISOString() : null,
     checkOut: a.checkOut ? a.checkOut.toISOString() : null,
     workingHours: a.workingHours, status: a.status,
-    isLate: a.isLate, isEarlyOut: a.isEarlyOut, source: a.source,
+    isLate: a.isLate, isEarlyOut: a.isEarlyOut, lateMinutes: a.lateMinutes, earlyOutMinutes: a.earlyOutMinutes, source: a.source,
     notes: a.notes,
     checkInDeviceId: a.checkInDeviceId, checkInDeviceName: a.checkInDeviceName,
     checkOutDeviceId: a.checkOutDeviceId, checkOutDeviceName: a.checkOutDeviceName,
@@ -22,6 +22,12 @@ function fmtAtt(a: typeof attendanceTable.$inferSelect, empName?: string | null,
     correctedBy: a.correctedBy, correctedAt: a.correctedAt ? a.correctedAt.toISOString() : null,
     createdAt: a.createdAt.toISOString(),
   };
+}
+
+async function getShiftIdForDate(employeeId: number, dateValue: string, fallback?: number | null): Promise<number | null> {
+  const weekday = new Date(`${dateValue}T12:00:00Z`).getUTCDay();
+  const [scheduled] = await db.select({ shiftId: shiftSchedulesTable.shiftId, isOff: shiftSchedulesTable.isOff }).from(shiftSchedulesTable).where(and(eq(shiftSchedulesTable.employeeId, employeeId), eq(shiftSchedulesTable.weekday, weekday)));
+  return scheduled ? (scheduled.isOff ? null : scheduled.shiftId) : (fallback ?? null);
 }
 
 function calcWorkingHours(checkIn: Date, checkOut: Date): number {
@@ -138,18 +144,20 @@ router.post("/attendance/zkteco", async (req, res): Promise<void> => {
 
       if (!existing) {
         let isLate = false;
-        if (emp.shiftId) {
-          const [shift] = await db.select().from(shiftsTable).where(eq(shiftsTable.id, emp.shiftId));
+        const scheduledShiftId = await getShiftIdForDate(emp.id, dateStr, emp.shiftId);
+        if (scheduledShiftId) {
+          const [shift] = await db.select().from(shiftsTable).where(eq(shiftsTable.id, scheduledShiftId));
           if (shift) {
             const [sh, sm] = shift.startTime.split(":").map(Number);
             const cutoff = new Date(punchTime);
             cutoff.setHours(sh, sm + shift.gracePeriodMinutes, 0, 0);
             isLate = punchTime > cutoff;
+            var lateMinutes = isLate ? Math.ceil((punchTime.getTime() - cutoff.getTime()) / 60000) : 0;
           }
         }
         await db.insert(attendanceTable).values({
           employeeId: emp.id, date: dateStr, checkIn: punchTime,
-          status: isLate ? "late" : "present", isLate, source: "biometric",
+          status: isLate ? "late" : "present", isLate, lateMinutes: lateMinutes ?? 0, source: "biometric",
           checkInVerifyType: verifyType,
         });
       } else if (existing.checkIn && !existing.checkOut) {
@@ -162,10 +170,11 @@ router.post("/attendance/zkteco", async (req, res): Promise<void> => {
             const shiftEnd = new Date(punchTime);
             shiftEnd.setHours(eh, em, 0, 0);
             isEarlyOut = punchTime < shiftEnd;
+             earlyOutMinutes = isEarlyOut ? Math.ceil((shiftEnd.getTime() - punchTime.getTime()) / 60000) : 0;
           }
         }
         await db.update(attendanceTable)
-          .set({ checkOut: punchTime, workingHours, isEarlyOut, checkOutVerifyType: verifyType })
+          .set({ checkOut: punchTime, workingHours, isEarlyOut, earlyOutMinutes, checkOutVerifyType: verifyType })
           .where(eq(attendanceTable.id, existing.id));
       }
     }
