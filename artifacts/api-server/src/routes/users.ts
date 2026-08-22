@@ -24,7 +24,8 @@ function fmtUser(
   return {
     id: u.id,
     email: u.email,
-    name: u.name,
+    name: employee ? `${employee.firstName} ${employee.lastName}`.trim() : u.name,
+    displayName: u.name,
     role: u.role,
     isActive: u.isActive,
     employeeId: u.employeeId,
