@@ -18,6 +18,11 @@ const COMPANY_DEFAULT_SETTINGS: Record<string, string> = {
   salaryVisibility: "admin_hr",       // admin_hr | all_managers | admin_only
   showSalaryToEmployee: "false",
   timezone: "Asia/Karachi",
+  lateDeductionType: "half_day",
+  lateDeductionValue: "0.5",
+  earlyOutDeductionValue: "0",
+  leaveDeductionValue: "1",
+  sandwichLeaveEnabled: "false",
   ...DEFAULT_SETTINGS,
 };
 
