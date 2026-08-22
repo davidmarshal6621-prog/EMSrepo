@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, and } from "drizzle-orm";
-import { db, payrollTable, employeesTable, attendanceTable, leavesTable, departmentsTable } from "@workspace/db";
+import { db, payrollTable, employeesTable, attendanceTable, leavesTable, departmentsTable, companySettingsTable } from "@workspace/db";
 
 const router: IRouter = Router();
 
@@ -96,11 +96,23 @@ router.post("/payroll", async (req, res): Promise<void> => {
   const absentDays = monthAtt.filter(a => a.status === "absent").length;
   const lateDays = monthAtt.filter(a => a.isLate).length;
 
-  // Simple deduction: 1 day salary per absent, 0.5 per late
+  // Configurable company policy; values are stored through Company Settings.
+  const policyRows = await db.select().from(companySettingsTable);
+  const policy = new Map(policyRows.map(r => [r.key, r.value]));
   const dailyRate = base / endDay;
-  const lateDeductions = lateDays * dailyRate * 0.5;
-  const leaveDeductions = absentDays * dailyRate;
-  const netSalary = base + allw - lateDeductions - leaveDeductions - other;
+  const lateMinutes = monthAtt.reduce((sum, a) => sum + (a.lateMinutes ?? 0), 0);
+  const earlyMinutes = monthAtt.reduce((sum, a) => sum + (a.earlyOutMinutes ?? 0), 0);
+  const lateType = policy.get("lateDeductionType") ?? "half_day";
+  const lateValue = Number(policy.get("lateDeductionValue") ?? 0.5);
+  const earlyValue = Number(policy.get("earlyOutDeductionValue") ?? 0);
+  const leaveValue = Number(policy.get("leaveDeductionValue") ?? 1);
+  const lateDeductions = lateType === "per_minute" ? lateMinutes * lateValue : lateDays * dailyRate * lateValue;
+  const earlyDeductions = earlyMinutes * earlyValue;
+  const leaveDeductions = absentDays * dailyRate * leaveValue;
+  const sandwichEnabled = (policy.get("sandwichLeaveEnabled") ?? "false") === "true";
+  const sandwichDays = sandwichEnabled ? monthAtt.filter(a => a.status === "absent").reduce((n, a) => { const d = new Date(`${a.date}T12:00:00Z`).getUTCDay(); return n + (d === 1 || d === 5 ? 1 : 0); }, 0) : 0;
+  const sandwichDeduction = sandwichDays * dailyRate * leaveValue;
+  const netSalary = base + allw - lateDeductions - earlyDeductions - leaveDeductions - sandwichDeduction - other;
 
   const [payroll] = await db.insert(payrollTable).values({
     employeeId, month, year,
