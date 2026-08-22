@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { getListShiftsQueryKey, useCreateShift, useListShifts, useUpdateShift } from "@workspace/api-client-react";
+import { getListShiftsQueryKey, useCreateShift, useListShifts, useUpdateShift, useListEmployees } from "@workspace/api-client-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -11,10 +11,16 @@ import { Plus, Clock, Pencil } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 type ShiftForm = { name: string; startTime: string; endTime: string; gracePeriodMinutes: string };
+const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+async function apiFetch(path: string, opts?: RequestInit) { const token = localStorage.getItem("ems_token"); const res = await fetch(`/api${path}`, { ...opts, headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...opts?.headers } }); if (!res.ok) throw new Error(await res.text()); return res.json(); }
 const blank: ShiftForm = { name: "", startTime: "09:00", endTime: "17:00", gracePeriodMinutes: "15" };
 
 export default function ShiftsList() {
   const { data: shifts, isLoading } = useListShifts();
+  const { data: employees = [] } = useListEmployees({});
+  const [scheduleEmployee, setScheduleEmployee] = useState("");
+  const [schedule, setSchedule] = useState(DAYS.map((_, weekday) => ({ weekday, shiftId: "", isOff: false })));
+  const [scheduleSaving, setScheduleSaving] = useState(false);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<number | null>(null);
   const [form, setForm] = useState<ShiftForm>(blank);
@@ -23,6 +29,8 @@ export default function ShiftsList() {
   const createMut = useCreateShift();
   const updateMut = useUpdateShift();
   const pending = createMut.isPending || updateMut.isPending;
+  useEffect(() => { if (!scheduleEmployee) return; apiFetch(`/shift-schedules?employeeId=${scheduleEmployee}`).then(rows => { const byDay = new Map(rows.map((r: any) => [r.weekday, r])); setSchedule(DAYS.map((_, weekday) => { const r = byDay.get(weekday); return { weekday, shiftId: r?.shiftId ? String(r.shiftId) : "", isOff: Boolean(r?.isOff) }; })); }).catch(() => setSchedule(DAYS.map((_, weekday) => ({ weekday, shiftId: "", isOff: false })))); }, [scheduleEmployee]);
+  async function saveSchedule() { if (!scheduleEmployee) return; setScheduleSaving(true); try { await apiFetch("/shift-schedules", { method: "PUT", body: JSON.stringify({ employeeId: Number(scheduleEmployee), schedule: schedule.map(d => ({ weekday: d.weekday, shiftId: d.shiftId ? Number(d.shiftId) : null, isOff: d.isOff })) }) }); toast({ title: "Weekly schedule saved" }); } catch (e: any) { toast({ title: "Could not save schedule", description: e.message, variant: "destructive" }); } finally { setScheduleSaving(false); } }
   function openCreate() { setEditing(null); setForm(blank); setOpen(true); }
   function openEdit(shift: NonNullable<typeof shifts>[number]) { setEditing(shift.id); setForm({ name: shift.name, startTime: shift.startTime, endTime: shift.endTime, gracePeriodMinutes: String(shift.gracePeriodMinutes ?? 15) }); setOpen(true); }
   function save() {
