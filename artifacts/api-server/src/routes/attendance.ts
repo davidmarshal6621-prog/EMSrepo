@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, and, gte, lte } from "drizzle-orm";
-import { db, attendanceTable, employeesTable, shiftsTable, shiftSchedulesTable, usersTable } from "@workspace/db";
+import { db, attendanceTable, employeesTable, shiftsTable, shiftSchedulesTable, companySettingsTable, usersTable } from "@workspace/db";
 import { requireAuth, type AuthRequest } from "../middlewares/auth";
 
 const router: IRouter = Router();
@@ -169,8 +169,10 @@ router.post("/attendance/zkteco", async (req, res): Promise<void> => {
             const [eh, em] = shift.endTime.split(":").map(Number);
             const shiftEnd = new Date(punchTime);
             shiftEnd.setHours(eh, em, 0, 0);
-            isEarlyOut = punchTime < shiftEnd;
-             earlyOutMinutes = isEarlyOut ? Math.ceil((shiftEnd.getTime() - punchTime.getTime()) / 60000) : 0;
+            const policyRows = await db.select().from(companySettingsTable);
+             const earlyGrace = Number(policyRows.find(r => r.key === "earlyOutGraceMinutes")?.value ?? 0);
+             earlyOutMinutes = Math.max(0, Math.ceil((shiftEnd.getTime() - punchTime.getTime()) / 60000) - earlyGrace);
+             isEarlyOut = earlyOutMinutes > 0;
           }
         }
         await db.update(attendanceTable)
