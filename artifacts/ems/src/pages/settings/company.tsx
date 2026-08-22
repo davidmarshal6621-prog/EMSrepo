@@ -83,6 +83,7 @@ export default function CompanySettings() {
     lateDeductionType: "half_day",
     lateDeductionValue: "0.5",
     earlyOutDeductionValue: "0",
+    earlyOutGraceMinutes: "0",
     leaveDeductionValue: "1",
     sandwichLeaveEnabled: "false",
   });
@@ -108,6 +109,7 @@ export default function CompanySettings() {
         lateDeductionType: settings.lateDeductionType || "half_day",
         lateDeductionValue: settings.lateDeductionValue || "0.5",
         earlyOutDeductionValue: settings.earlyOutDeductionValue || "0",
+        earlyOutGraceMinutes: settings.earlyOutGraceMinutes || "0",
         leaveDeductionValue: settings.leaveDeductionValue || "1",
         sandwichLeaveEnabled: settings.sandwichLeaveEnabled || "false",
       });
@@ -284,6 +286,7 @@ export default function CompanySettings() {
           </Field>
           <Field label="Late deduction value"><Input type="number" min="0" step="0.01" value={form.lateDeductionValue} onChange={e => setForm(f => ({ ...f, lateDeductionValue: e.target.value }))} /></Field>
           <Field label="Early-out deduction per minute"><Input type="number" min="0" step="0.01" value={form.earlyOutDeductionValue} onChange={e => setForm(f => ({ ...f, earlyOutDeductionValue: e.target.value }))} /></Field>
+          <Field label="Acceptable early-out (minutes)"><Input type="number" min="0" value={form.earlyOutGraceMinutes} onChange={e => setForm(f => ({ ...f, earlyOutGraceMinutes: e.target.value }))} /></Field>
           <Field label="Leave deduction multiplier"><Input type="number" min="0" step="0.1" value={form.leaveDeductionValue} onChange={e => setForm(f => ({ ...f, leaveDeductionValue: e.target.value }))} /></Field>
         </div>
         <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
