@@ -12,6 +12,8 @@ export const attendanceTable = pgTable("attendance", {
   status: text("status").notNull().default("present"), // present|absent|late|on-leave|half-day
   isLate: boolean("is_late").notNull().default(false),
   isEarlyOut: boolean("is_early_out").notNull().default(false),
+  lateMinutes: integer("late_minutes").notNull().default(0),
+  earlyOutMinutes: integer("early_out_minutes").notNull().default(0),
   source: text("source").notNull().default("manual"), // manual|biometric|web
   notes: text("notes"),
   // Device & verify type tracking
