@@ -110,7 +110,18 @@ router.post("/payroll", async (req, res): Promise<void> => {
   const earlyDeductions = earlyMinutes * earlyValue;
   const leaveDeductions = absentDays * dailyRate * leaveValue;
   const sandwichEnabled = (policy.get("sandwichLeaveEnabled") ?? "false") === "true";
-  const sandwichDays = sandwichEnabled ? monthAtt.filter(a => a.status === "absent").reduce((n, a) => { const d = new Date(`${a.date}T12:00:00Z`).getUTCDay(); return n + (d === 1 || d === 5 ? 1 : 0); }, 0) : 0;
+  const absentDates = new Set(monthAtt.filter(a => a.status === "absent").map(a => a.date));
+  let sandwichDays = 0;
+  if (sandwichEnabled) {
+    for (let day = 1; day <= endDay; day++) {
+      const date = new Date(Date.UTC(year, month - 1, day));
+      const weekday = date.getUTCDay();
+      if (weekday !== 0 && weekday !== 6) continue;
+      const prev = new Date(Date.UTC(year, month - 1, day - 1)).toISOString().slice(0, 10);
+      const next = new Date(Date.UTC(year, month - 1, day + 1)).toISOString().slice(0, 10);
+      if (absentDates.has(prev) && absentDates.has(next)) sandwichDays++;
+    }
+  }
   const sandwichDeduction = sandwichDays * dailyRate * leaveValue;
   const netSalary = base + allw - lateDeductions - earlyDeductions - leaveDeductions - sandwichDeduction - other;
 
